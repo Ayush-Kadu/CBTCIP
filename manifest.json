@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "HireLeap Job Detector",
+  "version": "1.0",
+
+  "permissions": ["scripting", "activeTab"],
+
+  "host_permissions": [
+    "*://*.linkedin.com/*",
+    "*://*.indeed.com/*",
+    "*://*.naukri.com/*",
+    "*://*.glassdoor.com/*",
+    "*://*.glassdoor.co.in/*",
+    "*://*.monster.com/*",
+    "*://*.ziprecruiter.com/*",
+"*://*.ziprecruiter.in/*",
+    "*://*.dice.com/*",
+    "*://*.wellfound.com/*",
+    "*://*.shine.com/*",
+    "*://*.shine.in/*",
+    "*://*.internshala.com/*",
+    "*://*.foundit.in/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.linkedin.com/*",
+        "*://*.indeed.com/*",
+        "*://*.naukri.com/*",
+        "*://*.glassdoor.com/*",
+        "*://*.glassdoor.co.in/*",
+        "*://*.monster.com/*",
+        "*://*.ziprecruiter.com/*",
+        "*://*.ziprecruiter.in/*",
+        "*://*.dice.com/*",
+        "*://*.wellfound.com/*",
+        "*://*.shine.com/*",
+        "*://*.shine.in/*",
+        "*://*.internshala.com/*",
+        "*://*.foundit.in/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

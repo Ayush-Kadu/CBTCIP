@@ -1,0 +1,244 @@
+console.log("HireLeap Extension Loaded");
+
+// Track last job to avoid duplicate popups
+let lastJobText = "";
+
+// MAIN OBSERVER
+const observer = new MutationObserver(() => {
+  expandJobDescription();
+  detectJob();
+});
+
+observer.observe(document.body, {
+  childList: true,
+  subtree: true,
+});
+
+function getJobDescriptionElement() {
+  return (
+    // LinkedIn
+    document.querySelector(".jobs-description-content__text") ||
+    document.querySelector('[class*="jobs-description"]') ||
+    // Indeed
+    document.querySelector("#jobDescriptionText") ||
+    // Naukri
+    document.querySelector(".job-desc") ||
+    null
+  );
+}
+
+function detectJob() {
+  // const jdContainer = getJobDescriptionElement();
+  const jdContainer =
+    document.querySelector('[class*="jobs-description"]') || // LinkedIn
+    document.querySelector("#jobDescriptionText") || // Indeed
+    document.querySelector('[class*="job-desc"]'); // Naukri
+
+  if (!jdContainer) return;
+
+  const text = jdContainer.innerText;
+
+  // 👇 LOWER threshold (important)
+  if (!text || text.length < 50) return;
+
+  // 👇 Prevent duplicates
+  if (text === lastJobText) return;
+
+  lastJobText = text;
+
+  // Remove old popup
+  const oldPopup = document.getElementById("hireleap-popup");
+  if (oldPopup) oldPopup.remove();
+
+  // 👇 Delay ensures JD fully loads
+  setTimeout(() => {
+    showPopup(text);
+  }, 1000);
+  console.log("JD Container:", jdContainer);
+}
+
+function showPopup(jdText) {
+  if (document.getElementById("hireleap-popup")) return;
+
+  const popup = document.createElement("div");
+  popup.id = "hireleap-popup";
+
+  popup.style.position = "fixed";
+  popup.style.bottom = "20px";
+  popup.style.right = "20px";
+  popup.style.width = "280px";
+  popup.style.background = "#0A66C2";
+  popup.style.color = "white";
+  popup.style.padding = "16px";
+  popup.style.borderRadius = "14px";
+  popup.style.boxShadow = "0 10px 30px rgba(0,0,0,0.25)";
+  popup.style.zIndex = "2147483647"; // MAX z-index
+  popup.style.pointerEvents = "auto";
+  popup.style.fontFamily = "Arial, sans-serif";
+
+  popup.innerHTML = `
+        <div style="font-size:22px;">🚀</div>
+        <div style="font-size:22px; font-weight:700; margin:6px 0;">
+            Analyze this job with HireLeap
+        </div>
+
+        <button id="goHireLeap"
+            style="
+                margin-top:12px;
+                background:white;
+                color:#0A66C2;
+                border:none;
+                padding:10px 16px;
+                border-radius:8px;
+                font-weight:bold;
+                cursor:pointer;
+                font-size:16px;
+                pointer-events:auto;
+            ">
+            Analyze
+        </button>
+    `;
+
+  document.documentElement.appendChild(popup);
+
+  const btn = document.getElementById("goHireLeap");
+
+  btn.addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    console.log("Analyze clicked");
+
+    window.location.href =
+      "https://www.hireleap.app/analyze?jd=" + encodeURIComponent(jdText);
+  });
+}
+
+
+
+function expandJobDescription() {
+  const seeMoreBtn = document.querySelector(
+    'button[aria-label*="more"], button[aria-expanded="false"]',
+  );
+
+  if (seeMoreBtn) {
+    seeMoreBtn.click();
+  }
+}
+function showHelperPopup() {
+  const popup = document.createElement("div");
+  popup.id = "hireleap-popup";
+
+  popup.innerHTML = `
+        <div style="
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            z-index: 9999;
+        ">
+            👉 Select a job to analyze
+        </div>
+    `;
+
+  document.body.appendChild(popup);
+}
+function getUniversalJD() {
+  const text = document.body.innerText;
+
+  if (
+    text.toLowerCase().includes("responsibilities") ||
+    text.toLowerCase().includes("requirements") ||
+    text.toLowerCase().includes("qualifications")
+  ) {
+    return text;
+  }
+
+  return null;
+}
+function getJobText() {
+  const host = window.location.hostname;
+
+  const selectors = [
+    // LinkedIn
+    ".jobs-description-content__text",
+    ".jobs-box__html-content",
+    ".jobs-description",
+
+    // Indeed
+    "#jobDescriptionText",
+    ".jobsearch-JobComponent-description",
+    "[data-testid='jobsearch-JobComponent-description']",
+
+    // Naukri
+    ".styles_job-desc-container__txpYf",
+    ".dang-inner-html",
+    ".job-desc",
+
+    // Glassdoor
+    ".jobDescriptionContent",
+    ".desc",
+
+    // Monster
+    ".job-description",
+
+    // ZipRecruiter
+    ".job_description",
+
+    // Dice
+    ".job-description",
+
+    // Internshala
+    ".internship_details",
+
+    // Generic fallback
+    "main",
+    "article",
+  ];
+
+  for (let selector of selectors) {
+    const el = document.querySelector(selector);
+
+    if (el && el.innerText.trim().length > 200) {
+      return el.innerText.trim();
+    }
+  }
+
+  return null;
+}
+
+async function handleAnalysis(jdText) {
+  try {
+    const authRes = await fetch("https://www.hireleap.app/api/check-auth", {
+      credentials: "include",
+    });
+
+    const authData = await authRes.json();
+
+    if (!authData.loggedIn) {
+      window.open("https://www.hireleap.app/signup", "_blank");
+      return;
+    }
+
+    const res = await fetch("https://www.hireleap.app/api/analyze", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ jd: jdText }),
+    });
+
+    const result = await res.json();
+
+    document.getElementById("result").innerHTML = `
+            <p><strong>Match:</strong> ${result.score}%</p>
+            <p><strong>Missing:</strong> ${result.missing.join(", ")}</p>
+        `;
+  } catch (err) {
+    console.error("Error:", err);
+  }
+}
